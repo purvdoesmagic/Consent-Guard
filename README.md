@@ -67,7 +67,7 @@ Faculty demo: [docs/faculty-demo.md](docs/faculty-demo.md) ·
 ## 4. Folder structure
 
 ```
-Consent Gaurd/
+Consent-Guard/
 ├─ backend/
 │  ├─ app/
 │  │  ├─ api/              Flask blueprints (auth, consents, records, audit, cases, dashboard, meta, health)
@@ -88,7 +88,8 @@ Consent Gaurd/
 ├─ docs/                   architecture, api, threat-model, testing, faculty-demo, case-study
 ├─ scripts/                setup_env.py, totp.py, smoke_test.py, tamper_demo.py,
 │                          case_study.py, forensic_examiner.py
-├─ .env.example, .gitignore, README.md
+├─ .github/workflows/     CI: backend tests (pytest) and frontend tests + build
+├─ .env.example, .gitignore, .gitattributes, LICENSE, README.md
 ```
 
 ## 5. Database design
