@@ -1,5 +1,7 @@
 # ConsentGuard – Privacy-Centric User Consent and Data Access Management System
 
+[![CI](https://github.com/purvdoesmagic/Consent-Gaurd/actions/workflows/ci.yml/badge.svg)](https://github.com/purvdoesmagic/Consent-Gaurd/actions/workflows/ci.yml)
+
 ConsentGuard is a student project that combines **user consent management**, **consent-enforced access to protected
 data**, **tamper-evident audit logging**, **rule-based detection of suspicious access** and a **digital-forensics
 investigation workflow** with PDF evidence reports.
@@ -309,3 +311,7 @@ once each.
 | Records fail to decrypt after changing `.env` | The key changed. Restore the old key or reset demo data |
 | Investigator sent to Account security | Investigators must enable MFA first |
 | `npm` warns about esbuild install scripts | Harmless with npm 11; the build works without approving it |
+
+## 16. License
+
+Released under the [MIT License](LICENSE).

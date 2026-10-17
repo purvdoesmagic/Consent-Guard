@@ -32,3 +32,8 @@ evidence/
 Thumbs.db
 .vscode/
 .idea/
+
+# Test / coverage output and logs
+.coverage
+htmlcov/
+*.log
