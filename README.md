@@ -1,6 +1,6 @@
 # ConsentGuard – Privacy-Centric User Consent and Data Access Management System
 
-[![CI](https://github.com/purvdoesmagic/Consent-Gaurd/actions/workflows/ci.yml/badge.svg)](https://github.com/purvdoesmagic/Consent-Gaurd/actions/workflows/ci.yml)
+[![CI](https://github.com/purvdoesmagic/Consent-Guard/actions/workflows/ci.yml/badge.svg)](https://github.com/purvdoesmagic/Consent-Guard/actions/workflows/ci.yml)
 
 ConsentGuard is a student project that combines **user consent management**, **consent-enforced access to protected
 data**, **tamper-evident audit logging**, **rule-based detection of suspicious access** and a **digital-forensics
