@@ -88,7 +88,7 @@ Consent-Guard/
 ├─ docs/                   architecture, api, threat-model, testing, faculty-demo, case-study
 ├─ scripts/                setup_env.py, totp.py, smoke_test.py, tamper_demo.py,
 │                          case_study.py, forensic_examiner.py
-├─ .github/workflows/     CI: backend tests (pytest) and frontend tests + build
+├─ .github/workflows/      CI: backend tests (pytest) and frontend tests + build
 ├─ .env.example, .gitignore, .gitattributes, LICENSE, README.md
 ```
 
