@@ -9,8 +9,8 @@ def test_demo_data_triggers_all_four_rules(app):
     names = {u.id: u.username for u in User.query.all()}
     alerts = find_alerts(LogEntry.query.order_by(LogEntry.id).all(), names)
     assert {a["rule"] for a in alerts} == {"R1", "R2", "R3", "R4"}
-    after_withdrawal = next(a for a in alerts if a["rule"] == "R2")
-    assert len(after_withdrawal["log_ids"]) == 3
+    after_withdrawal = {a["explanation"].split()[0]: len(a["log_ids"]) for a in alerts if a["rule"] == "R2"}
+    assert after_withdrawal == {"brightads": 3, "quickloans": 4}
 
 
 def test_only_investigators_see_alerts_and_cases(client, users):

@@ -112,7 +112,7 @@ function AddRecordForm({ categories, onSaved }) {
   return (
     <form className="card" onSubmit={submit}>
       <h2>Add personal data</h2>
-      <p className="muted small">Use fake data only. The content is encrypted before it is saved.</p>
+      <p className="muted small">The content is encrypted before it is saved.</p>
       <div className="row">
         <label>
           Title

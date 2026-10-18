@@ -18,7 +18,11 @@ bp = Blueprint("auth", __name__, url_prefix="/api")
 
 def current_user():
     user_id = session.get("user_id")
-    return db.session.get(User, user_id) if user_id else None
+    user = db.session.get(User, user_id) if user_id else None
+    # The username must match too: after the database is reset, the same id can belong to someone else
+    if user is None or user.username != session.get("username"):
+        return None
+    return user
 
 
 def login_required(*roles):
@@ -98,6 +102,7 @@ def login():
 
     session.clear()
     session["user_id"] = user.id
+    session["username"] = user.username
     session.permanent = True  # expires after PERMANENT_SESSION_LIFETIME
     add_log("login", "success", user_id=user.id, target=username)
     return {"user": user.to_dict()}

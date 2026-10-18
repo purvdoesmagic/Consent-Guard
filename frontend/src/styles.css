@@ -208,8 +208,10 @@ tbody tr:hover { background: #f7fafb; }
 }
 .login-page .login-box { margin: auto 60px; }
 .login-box form button { width: 100%; }
-.demo-accounts { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
-.demo-accounts p { width: 100%; margin: 0 0 4px; }
+.link-button { background: none; color: var(--teal); padding: 0; font-weight: 600; font-size: 0.9rem; }
+.link-button:hover { background: none; text-decoration: underline; }
+.sample-accounts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.footer { color: var(--muted); font-size: 0.8rem; margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); }
 .qr { width: 180px; height: 180px; }
 
 @media (max-width: 800px) {

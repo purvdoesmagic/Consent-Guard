@@ -5,7 +5,7 @@
 A website that lets people control which companies can use their personal data, and keeps a log
 that shows if anyone tampers with it. Made as a college project.
 
-All data in this project is **fake sample data**. Do not enter real personal data.
+The sample data is made up (emails use example.com, phone numbers use 555). Do not enter real personal data.
 
 ## The problem
 
@@ -122,15 +122,15 @@ npm run dev                             # website on http://127.0.0.1:5173
 shows both the website and the API at http://127.0.0.1:5000 and opens it in your browser. (It builds the website
 with `npm run build` the first time.) Close the black window to stop it.
 
-Demo accounts (password for all: `Demo-Password-2026!`):
+Sample accounts (password for all: `Demo-Password-2026!`; on the login page click **Use a sample account**):
 
 | Account | Role |
 | --- | --- |
-| alice, bob, carol, dave | User |
-| acme, brightads, quickloans | Company |
+| alice, bob, priya, rahul, carol, dave | User |
+| acme, brightads, citycare, quickloans | Company |
 | ivy | Investigator |
 
-Things to try: log in as **brightads** and request Alice's data (blocked, because she withdrew permission).
+Things to try: log in as **brightads** and request Bob's contact details for marketing (allowed), then Alice's (blocked, because she withdrew permission).
 Log in as **alice**, give a permission, then withdraw it. Log in as **ivy**, open **Alerts**, create a case and
 download the PDF report.
 

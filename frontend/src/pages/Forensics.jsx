@@ -48,7 +48,7 @@ export default function Forensics() {
 
   const doCoverUp = () =>
     run(async () => {
-      if (!window.confirm("Demo only: secretly delete QuickLoans' blocked attempts from the log?")) return;
+      if (!window.confirm("This simulates an insider deleting QuickLoans' blocked attempts directly in the database. Continue?")) return;
       setCoverUp(await api("/demo/cover-up", "POST", { company: "quickloans" }));
       setCheck(null);
       setComparison(null);
@@ -108,7 +108,7 @@ export default function Forensics() {
         )}
       </Step>
 
-      <Step number="3" title="The cover-up (demo)" warning>
+      <Step number="3" title="Insider tampering (simulation)" warning>
         <p>
           Now we play the attacker: someone with direct database access deletes QuickLoans' blocked attempts and
           recalculates every hash so the chain looks fine.
@@ -143,8 +143,8 @@ export default function Forensics() {
         {comparison && <ComparisonResult result={comparison} />}
       </Step>
 
-      <Step number="6" title="Undo the demo">
-        <p>Put the evidence copy back so the demo can be shown again.</p>
+      <Step number="6" title="Restore the evidence copy">
+        <p>Put the evidence copy back to undo the tampering.</p>
         <button className="secondary" onClick={() => restore(latest)} disabled={!latest}>
           Restore copy {latest?.id}
         </button>

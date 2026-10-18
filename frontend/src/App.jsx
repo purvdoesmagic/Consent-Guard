@@ -88,6 +88,7 @@ export default function App() {
           <Route path="/account" element={<Account user={user} onChange={setUser} />} />
           <Route path="*" element={<p>Page not found.</p>} />
         </Routes>
+        <footer className="footer">© 2026 ConsentGuard · Your data, your choice</footer>
       </main>
     </div>
   );

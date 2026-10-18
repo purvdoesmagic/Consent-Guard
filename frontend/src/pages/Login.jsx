@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 
-const DEMO_PASSWORD = "Demo-Password-2026!";
-const DEMO_ACCOUNTS = [
+// Sample accounts created by backend/seed.py (shown only when "Use a sample account" is clicked)
+const SAMPLE_PASSWORD = "Demo-Password-2026!";
+const SAMPLE_ACCOUNTS = [
   ["alice", "User"],
   ["carol", "User"],
   ["brightads", "Company"],
@@ -17,6 +18,7 @@ export default function Login({ onLogin }) {
   const [code, setCode] = useState("");
   const [needCode, setNeedCode] = useState(false);
   const [error, setError] = useState("");
+  const [showSamples, setShowSamples] = useState(false);
 
   async function logIn(name, pass) {
     setError("");
@@ -34,10 +36,10 @@ export default function Login({ onLogin }) {
     logIn(username, password);
   }
 
-  function demo(name) {
+  function signInAs(name) {
     setUsername(name);
-    setPassword(DEMO_PASSWORD);
-    logIn(name, DEMO_PASSWORD);
+    setPassword(SAMPLE_PASSWORD);
+    logIn(name, SAMPLE_PASSWORD);
   }
 
   return (
@@ -76,14 +78,18 @@ export default function Login({ onLogin }) {
           No account? <Link to="/register">Register</Link>
         </p>
 
-        <div className="demo-accounts">
-          <p className="small muted">Demo accounts (fake data), one click to log in:</p>
-          {DEMO_ACCOUNTS.map(([name, role]) => (
-            <button key={name} type="button" className="chip" onClick={() => demo(name)}>
-              {name} <small>{role}</small>
-            </button>
-          ))}
-        </div>
+        <button type="button" className="link-button" onClick={() => setShowSamples(!showSamples)}>
+          {showSamples ? "Hide sample accounts" : "Use a sample account"}
+        </button>
+        {showSamples && (
+          <div className="sample-accounts">
+            {SAMPLE_ACCOUNTS.map(([name, role]) => (
+              <button key={name} type="button" className="chip" onClick={() => signInAs(name)}>
+                {name} <small>{role}</small>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

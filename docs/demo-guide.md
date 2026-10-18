@@ -22,14 +22,19 @@ This guide explains what the website does, what to click and what to say. The fu
 2. If you have already practised the demo, reset the data first. In the `backend` folder, run
    `.\.venv\Scripts\python.exe seed.py`, then start `run.bat` again.
 3. Zoom the browser to 110–125% (Ctrl and +) so the faculty can read it.
-4. On the login page, use the **one-click demo buttons**. Every account uses the password `Demo-Password-2026!`.
+4. On the login page, click **Use a sample account**, then click a name to sign in. You can also type the
+   username and the password `Demo-Password-2026!` (the same for every account).
+
+The website already contains about six weeks of activity, so it looks like a site that has been in use.
 
 | Account | Role | Used in |
 | --- | --- | --- |
-| alice | User | Part A |
-| brightads | Company | Part B |
-| ivy | Investigator | Parts C and D |
+| alice | User (Alice Fernandes) | Part A |
+| brightads | Company (BrightAds Marketing) | Part B |
+| ivy | Investigator (Ivy Raman) | Parts C and D |
 | carol, quickloans | User, Company | The case study story |
+| bob, priya, rahul, dave | Users | Other customers |
+| acme, citycare | Companies | Acme Health Research, CityCare Hospital |
 
 ### If the faculty asks you to run it from the terminal
 
@@ -117,8 +122,8 @@ terminal. It also says VALID (fooled), and only **Compare with copy** in the web
 
 ### Part A: the user controls their data (alice, 2 min)
 
-1. Click **alice**. Point at the home page numbers.
-2. **My data**: click **View** on "Blood test results".
+1. Sign in as **alice**. Point at the home page numbers.
+2. **My data**: click **View** on "Blood test report (Sep 2026)".
    *Say:* "This is stored encrypted with AES-256. In the database it's unreadable without the key."
 3. **My permissions**: show that Acme has permission for *research* on *health* data, and that BrightAds'
    permission is **withdrawn**.
@@ -128,13 +133,17 @@ terminal. It also says VALID (fooled), and only **Compare with copy** in the web
 5. **Activity log**: click the **Blocked** filter. *Say:* "Alice can see every company that tried to see her
    data and was blocked."
 
-### Part B: a company is blocked (brightads, 1–2 min)
+### Part B: a company gets data only with permission (brightads, 2 min)
 
-1. Log out and click **brightads**. Open **Request data**.
-2. Choose purpose **marketing** and click **Request** on Alice's "Contact details".
-   It shows **Blocked: Permission was withdrawn**.
-3. Choose **analytics** and request "Bank summary". It shows **Blocked: Wrong purpose**.
-   *Say:* "The server asks 3 questions: Did she give permission? For this purpose? Is it still active and
+1. Log out and sign in as **brightads**. Open **Permissions given to us**: Bob, Priya and Rahul have active
+   permissions; Alice's is **withdrawn**.
+2. Open **Request data**, choose purpose **marketing** and click **Request** on Bob's "Contact details".
+   The data is shown (green). *Say:* "Bob allowed BrightAds to use his contact details for marketing."
+3. Now click **Request** on Alice's "Contact details". It shows **Blocked: Permission was withdrawn**.
+4. Click **Request** on Bob's "Vaccination record". It shows **Blocked: Data type not allowed**,
+   because Bob only allowed *contact*.
+5. Choose **analytics** and request Alice's "Bank statement summary". It shows **Blocked: Wrong purpose**.
+   *Say:* "The server asks 3 questions: Did they give permission? For this purpose? Is it still active and
    does it cover this data type? Any 'no' means blocked."
 
 ### Part C: the investigator (ivy, 2 min)
@@ -204,7 +213,7 @@ Tests: `backend` has 30 pytest tests and `frontend` has 6 Vitest tests. They run
 | Where is the encryption key? | In the `.env` file on the server, never in the database. Without it, the data can't be read. |
 | What does AES-GCM add? | Encryption plus a tamper check: a changed ciphertext fails to decrypt. |
 | What happens when permission expires? | Before every check, the server marks expired permissions as expired, so access is blocked from that moment. |
-| Is the data real? | No, everything is fake sample data. |
+| Is the data real? | No. The people and records are made up (emails use example.com, phone numbers use 555), but the website works exactly as it would with real data. |
 | What would you improve? | Store the last hash somewhere outside the app automatically (signed or timestamped), host it online with HTTPS, and use smarter detection. |
 | Why SQLite? | It's simple and needs no installation, which is enough for a local project. A real deployment would use PostgreSQL. |
 
@@ -218,4 +227,4 @@ Tests: `backend` has 30 pytest tests and `frontend` has 6 Vitest tests. They run
 | Login says "Too many wrong attempts" | Wait 5 minutes, or reset with `seed.py`. |
 | The demo data looks messy after practice | Close `run.bat`, run `seed.py` in `backend`, then start `run.bat` again. |
 | The cover-up says "Nothing to delete" | It was already done. Click **Restore copy**, or reset with `seed.py`. |
-| Bob's permission shows "expired" | That's intended: it expires 2 minutes after seeding, to show expiry. |
+| Bob's permission for Acme shows "expired" | That's intended: it ended 5 days ago, to show expiry. Acme's later attempt is blocked as "Permission has expired". |
