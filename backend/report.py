@@ -1,12 +1,23 @@
 """Creates the PDF report for an investigation case (using ReportLab)."""
 
 import io
+from datetime import datetime, timedelta
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+
+IST = timedelta(hours=5, minutes=30)  # Indian Standard Time = UTC + 5:30
+
+
+def ist(value):
+    """Turn a UTC time (datetime or ISO text) into readable Indian time."""
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value[:19])
+    return (value + IST).strftime("%d %b %Y, %I:%M %p")
 
 
 def make_pdf(case, chain, names, investigator):
@@ -20,16 +31,16 @@ def make_pdf(case, chain, names, investigator):
         Paragraph(f"ConsentGuard investigation report: case #{case.id}", styles["Title"]),
         text(f"Title: {case.title}"),
         text(f"Investigator: {investigator}"),
-        text(f"Opened: {case.created_at:%Y-%m-%d %H:%M} UTC"),
+        text(f"Opened: {ist(case.created_at)} IST"),
         Spacer(1, 10),
         Paragraph("Description", styles["Heading2"]),
         text(case.description or "-"),
         Paragraph("Log entries linked to this case", styles["Heading2"]),
     ]
 
-    rows = [["#", "Time (UTC)", "Who", "Action", "Result", "Reason"]]
+    rows = [["#", "Time (IST)", "Who", "Action", "Result", "Reason"]]
     for e in case.logs:
-        rows.append([e.id, e.time[:19].replace("T", " "), names.get(e.user_id, "-"), e.action, e.result, e.reason or ""])
+        rows.append([e.id, ist(e.time), names.get(e.user_id, "-"), e.action, e.result, e.reason or ""])
     if len(rows) == 1:
         rows.append(["-", "No entries linked yet", "", "", "", ""])
     table = Table([[text(c, small) for c in row] for row in rows], colWidths=[25, 95, 70, 75, 50, 140], repeatRows=1)

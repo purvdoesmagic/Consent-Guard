@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { expect, test, vi } from "vitest";
 import App from "../App.jsx";
-import { reasonText } from "../api.js";
+import { formatTime, reasonText } from "../api.js";
 
 // Fake server: maps "METHOD /api/path" to [status, json]
 function fakeServer(routes) {
@@ -68,6 +68,11 @@ test("a blocked request shows the reason in plain English", async () => {
   await userEvent.selectOptions(await screen.findByLabelText(/purpose/), "research");
   await userEvent.click(await screen.findByRole("button", { name: "Request" }));
   expect(await screen.findByText("Blocked: Permission was withdrawn")).toBeInTheDocument();
+});
+
+test("times are shown in Indian Standard Time", () => {
+  expect(formatTime("2026-10-18T04:30:00.123456")).toMatch(/18 Oct 2026, 10:00 am IST/i);
+  expect(formatTime(null)).toBe("-");
 });
 
 test("reason codes have readable text", () => {

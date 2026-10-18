@@ -42,6 +42,19 @@ export function reasonText(code) {
   return REASONS[code] || code || "";
 }
 
+// The server stores times in UTC. Show them in Indian Standard Time (UTC+5:30),
+// e.g. "18 Oct 2026, 03:45 pm IST".
 export function formatTime(iso) {
-  return iso ? iso.slice(0, 16).replace("T", " ") + " UTC" : "-";
+  if (!iso) return "-";
+  const utc = new Date(iso.slice(0, 19) + "Z");
+  const text = utc.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return text + " IST";
 }

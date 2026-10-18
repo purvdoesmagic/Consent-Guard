@@ -28,10 +28,11 @@ clock = {"time": None}
 
 
 def day(days_ago, time_of_day):
-    """Move the clock to `days_ago` days before today at "HH:MM"."""
+    """Move the clock to `days_ago` days before today at "HH:MM" Indian time.
+    (Times are stored in UTC, which is 5 hours 30 minutes behind India.)"""
     hour, minute = map(int, time_of_day.split(":"))
     date = now() - timedelta(days=days_ago)
-    clock["time"] = datetime(date.year, date.month, date.day, hour, minute)
+    clock["time"] = datetime(date.year, date.month, date.day, hour, minute) - timedelta(hours=5, minutes=30)
 
 
 def later(minutes=0, seconds=0):
