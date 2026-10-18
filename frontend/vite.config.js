@@ -1,23 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// The dev server binds to localhost only and proxies /api to the Flask
-// backend, so the browser sees a single origin (cookies stay SameSite=Strict).
+// "npm run dev" starts the website on http://127.0.0.1:5173
+// and forwards every /api request to the Flask server on port 5000.
 export default defineConfig({
   plugins: [react()],
   server: {
     host: "127.0.0.1",
     port: 5173,
-    strictPort: true,
-    proxy: {
-      "/api": { target: "http://127.0.0.1:5000", changeOrigin: false },
-    },
+    proxy: { "/api": "http://127.0.0.1:5000" },
   },
-  preview: { host: "127.0.0.1", port: 4173 },
-  build: { outDir: "dist", sourcemap: false },
   test: {
     environment: "jsdom",
-    globals: true,
     setupFiles: ["./src/test/setup.js"],
   },
 });

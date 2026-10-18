@@ -1,46 +1,38 @@
-"""Create the project-root .env file for local development.
+"""Create the .env file with new random keys.
 
-* Copies .env.example and fills CG_ENCRYPTION_KEY with 32 fresh random bytes.
-* NEVER overwrites an existing .env or an existing key: if .env exists and
-  already has a valid key, nothing changes. If .env exists with only the
-  placeholder, the placeholder is replaced and every other line is kept.
-
-Usage (from the project root):  python scripts/setup_env.py
+Run from the project root:  python scripts/setup_env.py
+It never replaces a key that already exists, because encrypted data
+can't be read any more if the encryption key changes.
 """
 
 import base64
 import os
-import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE = ROOT / ".env.example"
-TARGET = ROOT / ".env"
-PLACEHOLDER = "REPLACE_WITH_GENERATED_BASE64_KEY"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENV_FILE = os.path.join(ROOT, ".env")
 
 
-def new_key():
+def random_key():
     return base64.urlsafe_b64encode(os.urandom(32)).decode("ascii")
 
 
 def main():
-    if not EXAMPLE.exists():
-        sys.exit("ERROR: .env.example not found; run this from the ConsentGuard project.")
+    lines = []
+    if os.path.exists(ENV_FILE):
+        with open(ENV_FILE, encoding="utf-8") as f:
+            lines = f.read().splitlines()
 
-    if TARGET.exists():
-        text = TARGET.read_text(encoding="utf-8")
-        if f"CG_ENCRYPTION_KEY={PLACEHOLDER}" not in text:
-            print(".env already exists and contains an encryption key - leaving it unchanged.")
-            print("(Replacing a key would make existing encrypted records unreadable.)")
-            return
-        TARGET.write_text(text.replace(PLACEHOLDER, new_key()), encoding="utf-8")
-        print("Filled the placeholder encryption key in the existing .env.")
-        return
+    existing = {line.split("=", 1)[0] for line in lines if "=" in line and not line.endswith("=REPLACE_ME")}
+    lines = [line for line in lines if not line.endswith("=REPLACE_ME")]
+    added = []
+    for name in ("CG_SECRET_KEY", "CG_ENCRYPTION_KEY"):
+        if name not in existing:
+            lines.append(f"{name}={random_key()}")
+            added.append(name)
 
-    text = EXAMPLE.read_text(encoding="utf-8").replace(PLACEHOLDER, new_key())
-    TARGET.write_text(text, encoding="utf-8")
-    print(f"Created {TARGET} with a new random development key.")
-    print("Back up this key: encrypted demo records cannot be recovered without it.")
+    with open(ENV_FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print("Added:", ", ".join(added) if added else "nothing (keys already exist)")
 
 
 if __name__ == "__main__":

@@ -1,65 +1,91 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
-import Layout from "./components/Layout.jsx";
-import { Loading } from "./components/Feedback.jsx";
-import { useAuth } from "./hooks/useAuth.jsx";
-import AccountPage from "./pages/AccountPage.jsx";
-import AuditPage from "./pages/AuditPage.jsx";
-import { LoginPage, MfaVerifyPage, RegisterPage } from "./pages/AuthPages.jsx";
-import CaseDetailPage from "./pages/CaseDetailPage.jsx";
-import CasesPage from "./pages/CasesPage.jsx";
-import { ConsentCreatePage, ConsentDetailPage, ConsentsPage } from "./pages/ConsentPages.jsx";
-import DashboardPage from "./pages/DashboardPage.jsx";
-import DetectionPage from "./pages/DetectionPage.jsx";
-import IntegrityPage from "./pages/IntegrityPage.jsx";
-import RecordsPage from "./pages/RecordsPage.jsx";
+import { useEffect, useState } from "react";
+import { NavLink, Route, Routes } from "react-router-dom";
+import { api } from "./api.js";
+import Account from "./pages/Account.jsx";
+import ActivityLog from "./pages/ActivityLog.jsx";
+import Alerts from "./pages/Alerts.jsx";
+import CaseDetail from "./pages/CaseDetail.jsx";
+import Cases from "./pages/Cases.jsx";
+import Consents from "./pages/Consents.jsx";
+import Home from "./pages/Home.jsx";
+import Login from "./pages/Login.jsx";
+import Records from "./pages/Records.jsx";
+import Register from "./pages/Register.jsx";
 
-// Route guards only shape navigation; every protected endpoint is authorized by the backend.
-function RequireAuth({ roles, allowWithoutMfa = false, children }) {
-  const { status, user } = useAuth();
-  if (status === "loading") return <Loading label="Checking session…" />;
-  if (status === "mfa") return <Navigate to="/mfa" replace />;
-  if (status !== "authenticated") return <Navigate to="/login" replace />;
-  // Investigators must enroll MFA first (also enforced server-side).
-  if (user.role === "investigator" && !user.mfa_enabled && !allowWithoutMfa) {
-    return <Navigate to="/account" replace />;
-  }
-  if (roles && !roles.includes(user.role)) return <NotFound />;
-  return children;
-}
-
-function NotFound() {
-  return (
-    <div className="card empty">
-      <strong>Page not found</strong>
-      <p>The page does not exist or is not available for your role.</p>
-      <Link to="/">Go to dashboard</Link>
-    </div>
-  );
-}
+// Menu links for each role. (The server also checks the role on every request.)
+const MENU = {
+  user: [
+    ["/consents", "My permissions"],
+    ["/records", "My data"],
+    ["/log", "Activity log"],
+  ],
+  company: [
+    ["/consents", "Permissions given to us"],
+    ["/records", "Request data"],
+    ["/log", "Activity log"],
+  ],
+  investigator: [
+    ["/alerts", "Alerts"],
+    ["/cases", "Cases"],
+    ["/consents", "All permissions"],
+    ["/log", "Activity log"],
+  ],
+};
 
 export default function App() {
-  const { status } = useAuth();
-  if (status === "loading") return <Loading label="Loading ConsentGuard…" />;
+  const [user, setUser] = useState(undefined); // undefined = still loading
+
+  useEffect(() => {
+    api("/me")
+      .then((data) => setUser(data.user))
+      .catch(() => setUser(null));
+  }, []);
+
+  async function logout() {
+    await api("/logout", "POST");
+    setUser(null);
+  }
+
+  if (user === undefined) return <p className="page">Loading...</p>;
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/register" element={<Register />} />
+        <Route path="*" element={<Login onLogin={setUser} />} />
+      </Routes>
+    );
+  }
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/mfa" element={<MfaVerifyPage />} />
-      <Route element={<RequireAuth allowWithoutMfa><Layout /></RequireAuth>}>
-        <Route index element={<RequireAuth><DashboardPage /></RequireAuth>} />
-        <Route path="consents" element={<RequireAuth><ConsentsPage /></RequireAuth>} />
-        <Route path="consents/new" element={<RequireAuth roles={["subject"]}><ConsentCreatePage /></RequireAuth>} />
-        <Route path="consents/:id" element={<RequireAuth><ConsentDetailPage /></RequireAuth>} />
-        <Route path="records" element={<RequireAuth roles={["subject", "processor"]}><RecordsPage /></RequireAuth>} />
-        <Route path="audit" element={<RequireAuth><AuditPage /></RequireAuth>} />
-        <Route path="integrity" element={<RequireAuth><IntegrityPage /></RequireAuth>} />
-        <Route path="cases" element={<RequireAuth roles={["investigator"]}><CasesPage /></RequireAuth>} />
-        <Route path="cases/:id" element={<RequireAuth roles={["investigator"]}><CaseDetailPage /></RequireAuth>} />
-        <Route path="detection" element={<RequireAuth roles={["investigator"]}><DetectionPage /></RequireAuth>} />
-        <Route path="account" element={<RequireAuth allowWithoutMfa><AccountPage /></RequireAuth>} />
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+    <div className="layout">
+      <nav className="menu">
+        <div className="brand">ConsentGuard</div>
+        <NavLink to="/" end>Home</NavLink>
+        {MENU[user.role].map(([to, label]) => (
+          <NavLink key={to} to={to}>{label}</NavLink>
+        ))}
+        <NavLink to="/account">Account</NavLink>
+        <div className="who">
+          {user.name}
+          <br />
+          <small>{user.role}</small>
+        </div>
+        <button onClick={logout}>Log out</button>
+      </nav>
+      <main className="page">
+        <Routes>
+          <Route path="/" element={<Home user={user} />} />
+          <Route path="/consents" element={<Consents user={user} />} />
+          <Route path="/records" element={<Records user={user} />} />
+          <Route path="/log" element={<ActivityLog />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/cases" element={<Cases />} />
+          <Route path="/cases/:id" element={<CaseDetail />} />
+          <Route path="/account" element={<Account user={user} onChange={setUser} />} />
+          <Route path="*" element={<p>Page not found.</p>} />
+        </Routes>
+      </main>
+    </div>
   );
 }

@@ -1,188 +1,183 @@
-"""Forensic case study CG-2026-0001: access after consent withdrawal, then an insider log cover-up.
+"""Case study: did QuickLoans misuse Carol's data, and did someone hide it?
 
-Runs on its OWN database (backend/instance/case_study.db); the demo database is never touched.
-All people and data are synthetic. Full walkthrough: docs/case-study.md.
+Story (all data is fake):
+  1. Carol lets QuickLoans use her financial and contact data for her loan (purpose "service").
+  2. QuickLoans also tries to use her phone number for marketing and to see her location -> blocked.
+  3. Carol withdraws permission. QuickLoans keeps trying (4 times) and also tries
+     Dave's records (3 times), who never gave permission -> all blocked.
+  4. An investigator opens a case and saves a copy of the database as evidence.
+  5. Someone with database access deletes QuickLoans' blocked attempts and
+     recalculates all hashes, so the app's own check still says VALID.
+  6. Comparing with the saved copy proves the cover-up and shows what was deleted.
 
-    backend\\.venv\\Scripts\\python.exe scripts\\case_study.py setup [--reset]   # stage the incident + open the case
-    backend\\.venv\\Scripts\\python.exe scripts\\case_study.py app-verify        # the application's own chain check
-    backend\\.venv\\Scripts\\python.exe scripts\\case_study.py cover-up          # insider deletes evidence, re-hashes chain
-
-To browse the case in the UI, start the backend against this database:
-
-    cd backend
-    $env:CG_DATABASE_URL = "sqlite:///instance/case_study.db"; .\\.venv\\Scripts\\python.exe wsgi.py
+Run from the project root, in this order (uses its own database, case_study.db):
+  backend\\.venv\\Scripts\\python.exe scripts\\case_study.py setup
+  backend\\.venv\\Scripts\\python.exe scripts\\case_study.py save-copy
+  backend\\.venv\\Scripts\\python.exe scripts\\case_study.py cover-up
+  backend\\.venv\\Scripts\\python.exe scripts\\case_study.py check
 """
 
+import hashlib
+import json
 import os
+import shutil
 import sqlite3
 import sys
-from datetime import timedelta
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "backend"))
-DB = ROOT / "backend" / "instance" / "case_study.db"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-from app.services.audit import GENESIS_HASH, hash_fields  # noqa: E402  (needs sys.path above)
+from app import create_app  # noqa: E402
+from audit_log import FIRST_HASH, make_hash, verify_chain  # noqa: E402
+from models import LogEntry, Record, User, case_logs, db  # noqa: E402
+from permissions import view_record  # noqa: E402
+from seed import give_consent, make_record, make_user, open_case, withdraw  # noqa: E402
 
-INSIDER_TARGET = "quickloans"
-
-
-def make_app():
-    from app import create_app
-
-    os.environ["CG_DATABASE_URL"] = "sqlite:///instance/case_study.db"
-    return create_app({"RATELIMIT_ENABLED": False})
+EVIDENCE = os.path.join(ROOT, "evidence")
+COPY_DB = os.path.join(EVIDENCE, "copy-1.db")
+COPY_INFO = os.path.join(EVIDENCE, "copy-1.json")
 
 
-def setup(reset):
-    import pyotp
-    from flask_migrate import upgrade
-
-    from app.cli import DEMO_PASSWORD, _DemoClient
-    from app.extensions import limiter
-    from app.models import User
-    from app.services.users import create_user
-    from app.utils.time import to_iso, utcnow
-
-    if DB.exists():
-        if not reset:
-            sys.exit(f"{DB} already exists. Use 'setup --reset' to recreate it.")
-        DB.unlink()
-    app = make_app()
-    with app.app_context():
-        upgrade()
-        limiter.enabled = False
-        clients = {}
-        for username, display, role in [("carol", "Carol Synthetic", "subject"), ("dave", "Dave Synthetic", "subject"),
-                                        ("quickloans", "QuickLoans Credit Ltd", "processor")]:
-            c = _DemoClient(app)
-            c.call("post", "/api/auth/register",
-                   {"username": username, "display_name": display, "role": role, "password": DEMO_PASSWORD})
-            c.call("post", "/api/auth/login", {"username": username, "password": DEMO_PASSWORD})
-            clients[username] = c
-        create_user("ivy", DEMO_PASSWORD, "Ivy Investigator", "investigator")
-        ivy = _DemoClient(app)
-        ivy.call("post", "/api/auth/login", {"username": "ivy", "password": DEMO_PASSWORD})
-        secret = ivy.call("post", "/api/auth/mfa/setup")["secret"]
-        ivy.call("post", "/api/auth/mfa/enable", {"code": pyotp.TOTP(secret).now()})
-        ids = {u.username: u.id for u in User.query.all()}
-        carol, dave, ql = clients["carol"], clients["dave"], clients["quickloans"]
-
-        def record(client, label, category, fields):
-            fields["Notice"] = "SYNTHETIC DEMO DATA"
-            return client.call("post", "/api/records",
-                               {"label": label, "category": category, "fields": fields})["record"]["id"]
-
-        def access(record_id, purpose):
-            ql.call("post", f"/api/records/{record_id}/access", {"action": "read", "purpose": purpose}, expect=None)
-
-        c_fin = record(carol, "Synthetic credit file", "financial", {"Score band": "Good (fictional)"})
-        c_contact = record(carol, "Synthetic contact card", "contact", {"Phone": "+00 000 0001"})
-        c_loc = record(carol, "Synthetic location history", "location", {"City": "Sampletown"})
-        d_recs = [record(dave, "Synthetic credit file", "financial", {"Score band": "Fair (fictional)"}),
-                  record(dave, "Synthetic contact card", "contact", {"Email": "dave@example.invalid"}),
-                  record(dave, "Synthetic vaccination record", "health", {"Vaccine": "Fictional-Vax"})]
-
-        # Phase 1 - legitimate processing under consent
-        consent = carol.call("post", "/api/consents", {
-            "recipient_id": ids["quickloans"], "purpose": "service_delivery", "categories": ["financial", "contact"],
-            "expires_at": to_iso(utcnow() + timedelta(days=180))})["consent"]["id"]
-        access(c_fin, "service_delivery")        # ALLOW_CONSENT
-        access(c_contact, "service_delivery")    # ALLOW_CONSENT
-        # Phase 2 - function creep before withdrawal
-        access(c_contact, "marketing")           # DENY_PURPOSE_NOT_COVERED   (R4)
-        access(c_loc, "service_delivery")        # DENY_CATEGORY_NOT_COVERED  (R5)
-        # Phase 3 - Carol withdraws; QuickLoans keeps trying
-        carol.call("post", f"/api/consents/{consent}/withdraw")
-        for rec in (c_contact, c_contact, c_contact, c_fin):
-            access(rec, "service_delivery")      # DENY_CONSENT_WITHDRAWN     (R2, and R1 overall)
-        # Phase 4 - probing other customers' records
-        for rec in d_recs:
-            access(rec, "marketing")             # DENY_NO_CONSENT            (R6)
-
-        # Phase 5 - complaint received; investigator opens the case and preserves the evidence
-        case = ivy.call("post", "/api/cases", {
-            "title": "Complaint: marketing contact after consent withdrawal (QuickLoans)",
-            "description": "Data subject carol reports marketing calls from QuickLoans Credit Ltd after she withdrew "
-                           "consent. Determine whether QuickLoans accessed or attempted to access her data after "
-                           "withdrawal, and whether other subjects are affected. Synthetic case study."})["case"]
-        evts = ivy.call("get", f"/api/audit/events?actor_id={ids['quickloans']}&event_type=record.access&page_size=200")
-        cons = ivy.call("get", f"/api/audit/events?consent_id={consent}&event_type=consent.&page_size=50")
-        ivy.call("post", f"/api/cases/{case['id']}/events", {
-            "event_ids": [e["event_id"] for e in evts["events"] + cons["events"]],
-            "rationale": "All QuickLoans record access attempts and the lifecycle of carol's consent"})
-        ivy.call("post", "/api/audit/verify")
-        limiter.enabled = True
-
-    print(f"Case-study database created: {DB}")
-    print(f"  Accounts (password {DEMO_PASSWORD}): carol, dave (subjects), quickloans (processor), ivy (investigator)")
-    print(f"  ivy's TOTP secret: {secret}")
-    print(f"  Case {case['case_number']} opened by ivy. Next: acquire evidence E1 (see docs/case-study.md).")
+def get_app():
+    return create_app({"SQLALCHEMY_DATABASE_URI": "sqlite:///case_study.db"})
 
 
-def app_verify():
-    from app.services import audit
-
-    with make_app().app_context():
-        result = audit.verify_chain()
-    print(f"Application verify_chain(): {'VALID' if result['valid'] else 'INVALID'} - {result['event_count']} events, "
-          f"head seq {result['head_seq']} {result['head_hash']}")
-    for f in result["findings"]:
-        print(f"  {f['type']} seq {f['seq']}: {f['message']}")
-    return 0 if result["valid"] else 1
+def db_path(app):
+    return os.path.join(app.instance_path, "case_study.db")
 
 
-def cover_up(db_path, username=INSIDER_TARGET):
-    """Anti-forensics by an insider with database access and knowledge of the algorithm.
-
-    Deletes every denied access attempt by ``username`` (and its case links),
-    then renumbers and re-hashes the rest of the chain and rewrites the stored
-    checkpoints so that the application's own verification reports VALID.
-    Returns the deleted event IDs.
-    """
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    with conn:
-        actor = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()["id"]
-        victims = conn.execute("SELECT id, event_id FROM audit_events WHERE actor_id=? AND event_type='record.access' "
-                               "AND outcome='denied'", (actor,)).fetchall()
-        for v in victims:
-            conn.execute("DELETE FROM case_events WHERE audit_event_id=?", (v["id"],))
-            conn.execute("DELETE FROM audit_events WHERE id=?", (v["id"],))
-
-        remap, prev = {}, GENESIS_HASH
-        for new_seq, row in enumerate(conn.execute("SELECT * FROM audit_events ORDER BY seq").fetchall(), start=1):
-            fields = dict(row, seq=new_seq, prev_hash=prev)
-            _, digest = hash_fields(fields)
-            conn.execute("UPDATE audit_events SET seq=?, prev_hash=?, hash=? WHERE id=?",
-                         (new_seq, prev, digest, row["id"]))
-            remap[row["hash"]] = (new_seq, digest)
-            prev = digest
-        for cp in conn.execute("SELECT id, head_hash FROM audit_checkpoints").fetchall():
-            if cp["head_hash"] in remap:
-                seq, digest = remap[cp["head_hash"]]
-                conn.execute("UPDATE audit_checkpoints SET head_seq=?, head_hash=? WHERE id=?", (seq, digest, cp["id"]))
-    conn.close()
-    return [v["event_id"] for v in victims]
+def file_sha256(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
 
-def main():
-    command = sys.argv[1] if len(sys.argv) > 1 else ""
-    if command == "setup":
-        setup(reset="--reset" in sys.argv)
-    elif command == "app-verify":
-        sys.exit(app_verify())
-    elif command == "cover-up":
-        if not DB.exists():
-            sys.exit("Run 'setup' first.")
-        deleted = cover_up(DB)
-        print(f"Insider removed {len(deleted)} audit events by {INSIDER_TARGET}, re-hashed the chain and "
-              "rewrote the checkpoints.")
-        print("Now run 'app-verify': the application's own check will report VALID.")
+def setup(app):
+    db.drop_all()
+    db.create_all()
+    carol = make_user("carol", "Carol Customer", "user")
+    dave = make_user("dave", "Dave Other", "user")
+    ql = make_user("quickloans", "QuickLoans Credit Ltd", "company")
+    ivy = make_user("ivy", "Ivy Investigator", "investigator")
+
+    credit = make_record(carol, "Credit file", "financial", "Credit score 712 (FAKE DATA)")
+    phone = make_record(carol, "Contact details", "contact", "Phone +00 111 2222 (FAKE DATA)")
+    location = make_record(carol, "Location history", "location", "Testville (FAKE DATA)")
+    dave_records = [
+        make_record(dave, "Credit file", "financial", "Credit score 650 (FAKE DATA)"),
+        make_record(dave, "Contact details", "contact", "dave@example.invalid (FAKE DATA)"),
+        make_record(dave, "Health record", "health", "Allergy: none (FAKE DATA)"),
+    ]
+
+    consent = give_consent(carol, ql, "service", ["financial", "contact"])
+    view_record(ql, credit, "service")      # allowed: needed for the loan
+    view_record(ql, phone, "service")       # allowed: QuickLoans now has her number
+    view_record(ql, phone, "marketing")     # blocked: wrong purpose
+    view_record(ql, location, "service")    # blocked: location was never allowed
+    withdraw(consent)
+    for record in (phone, credit, phone, credit):
+        view_record(ql, record, "service")  # blocked: after withdrawal
+    for record in dave_records:
+        view_record(ql, record, "marketing")  # blocked: Dave never gave permission
+
+    entries = LogEntry.query.filter_by(user_id=ql.id, action="record.view").all()
+    open_case(ivy, "Carol's complaint against QuickLoans",
+              "Carol withdrew permission but kept getting marketing calls from QuickLoans.", entries)
+    print(f"Case set up: {LogEntry.query.count()} log entries. Log check: "
+          f"{'VALID' if verify_chain()['valid'] else 'INVALID'}")
+
+
+def save_copy(app):
+    """Step 4: the investigator saves a copy of the database before anything else happens."""
+    os.makedirs(EVIDENCE, exist_ok=True)
+    shutil.copyfile(db_path(app), COPY_DB)
+    last = LogEntry.query.order_by(LogEntry.id.desc()).first()
+    info = {"entries": LogEntry.query.count(), "last_id": last.id, "last_hash": last.hash,
+            "file_sha256": file_sha256(COPY_DB)}
+    with open(COPY_INFO, "w") as f:
+        json.dump(info, f, indent=2)
+    print(f"Saved evidence copy: {info['entries']} entries, last hash {info['last_hash'][:16]}...")
+    print("Keep this last hash somewhere safe (it is also printed in the PDF report).")
+
+
+def cover_up(app):
+    """Step 5: an insider edits the database directly and hides QuickLoans' blocked attempts."""
+    ql = User.query.filter_by(username="quickloans").first()
+    entries = LogEntry.query.order_by(LogEntry.id).all()
+    kept = [e for e in entries if not (e.user_id == ql.id and e.result == "denied")]
+    removed = len(entries) - len(kept)
+
+    fields = ["time", "user_id", "owner_id", "action", "target", "result", "reason", "details"]
+    kept_data = [(e.id, {f: getattr(e, f) for f in fields}) for e in kept]
+    links = db.session.execute(case_logs.select()).all()
+
+    # Delete everything and write the remaining entries back with new numbers and new hashes
+    db.session.execute(case_logs.delete())
+    LogEntry.query.delete()
+    db.session.commit()
+
+    new_ids = {}
+    prev = FIRST_HASH
+    for new_id, (old_id, data) in enumerate(kept_data, start=1):
+        entry = LogEntry(id=new_id, prev_hash=prev, **data)
+        entry.hash = make_hash(entry)
+        db.session.add(entry)
+        new_ids[old_id] = new_id
+        prev = entry.hash
+    for case_id, log_id in links:
+        if log_id in new_ids:
+            db.session.execute(case_logs.insert().values(case_id=case_id, log_id=new_ids[log_id]))
+    db.session.commit()
+    print(f"Insider deleted {removed} entries and recalculated every hash. {len(kept)} entries left.")
+
+
+def check(app):
+    """Step 6: check the log in two ways."""
+    result = verify_chain()
+    print("1) The app's own check:", "VALID" if result["valid"] else "INVALID", f"({result['count']} entries)")
+    if result["valid"]:
+        print("   -> The app was fooled, because every hash was recalculated.")
+
+    if not os.path.exists(COPY_INFO):
+        print("No saved copy found. Run 'save-copy' before 'cover-up'.")
+        return
+    with open(COPY_INFO) as f:
+        info = json.load(f)
+
+    print("2) Compare with the saved copy:")
+    same_file = file_sha256(COPY_DB) == info["file_sha256"]
+    print("   Saved copy unchanged since it was saved:", "YES" if same_file else "NO")
+
+    last = db.session.get(LogEntry, info["last_id"])
+    if last is None or last.hash != info["last_hash"]:
+        print(f"   FAIL: the copy had {info['entries']} entries ending with hash {info['last_hash'][:16]}...,")
+        print(f"         but now there are {result['count']} entries and that hash no longer exists.")
     else:
-        sys.exit(__doc__)
+        print("   OK: the saved last hash still exists.")
 
+    # Find entries that are in the saved copy but not in the current log
+    columns = "time, user_id, action, target, result, reason"
+    old_db = sqlite3.connect(f"file:{COPY_DB}?mode=ro", uri=True)
+    old_rows = old_db.execute(f"SELECT {columns} FROM log_entry ORDER BY id").fetchall()
+    old_db.close()
+    current = {tuple(r) for r in db.session.execute(db.text(f"SELECT {columns} FROM log_entry")).all()}
+    missing = [r for r in old_rows if tuple(r) not in current]
+
+    names = {u.id: u.username for u in User.query.all()}
+    records = {f"record {r.id}": f"{names[r.owner_id]}'s {r.category}" for r in Record.query.all()}
+    print(f"   Entries missing compared to the copy: {len(missing)}")
+    for time, user_id, action, target, outcome, reason in missing:
+        print(f"     {time[11:19]}  {names.get(user_id)} {action} {records.get(target, target)}: {outcome} ({reason})")
+
+    if missing:
+        print("\nResult: QuickLoans got no data after Carol withdrew permission (all those attempts were blocked),")
+        print("but someone deleted exactly those blocked attempts from the log. The saved copy proves it.")
+
+
+COMMANDS = {"setup": setup, "save-copy": save_copy, "cover-up": cover_up, "check": check}
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2 or sys.argv[1] not in COMMANDS:
+        sys.exit("usage: python scripts/case_study.py setup | save-copy | cover-up | check")
+    application = get_app()
+    with application.app_context():
+        COMMANDS[sys.argv[1]](application)

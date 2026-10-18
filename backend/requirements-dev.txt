@@ -1,6 +1,2 @@
 -r requirements.txt
 pytest==8.4.2
-pypdf==5.9.0
-# Security scanners (optional; used for docs/testing.md section 7)
-pip-audit==2.10.1
-bandit==1.9.4
