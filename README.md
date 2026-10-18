@@ -84,6 +84,7 @@ Consent-Guard/
 │  ├─ report.py         PDF report
 │  ├─ forensics.py      evidence copies and tamper comparison
 │  ├─ seed.py           creates demo data
+│  ├─ check_log.py      checks the log from the terminal
 │  ├─ routes/           API: auth.py, data.py, investigator.py
 │  └─ tests/            pytest tests
 ├─ frontend/src/

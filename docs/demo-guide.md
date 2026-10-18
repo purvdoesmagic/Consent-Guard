@@ -31,6 +31,50 @@ This guide explains what the website does, what to click and what to say. The fu
 | ivy | Investigator | Parts C and D |
 | carol, quickloans | User, Company | The case study story |
 
+### If the faculty asks you to run it from the terminal
+
+Open PowerShell in the project folder (`Consent Guard`). There are two ways.
+
+**Way 1: one terminal (simplest)**
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe seed.py       # fresh demo data
+.\.venv\Scripts\python.exe app.py        # starts the server
+```
+
+Open **http://127.0.0.1:5000**. *Say:* "Flask serves the API and also the built React website."
+Press **Ctrl+C** to stop.
+
+**Way 2: two terminals (development mode, shows both parts separately)**
+
+```powershell
+# Terminal 1: backend (Python + Flask), port 5000
+cd backend
+.\.venv\Scripts\python.exe app.py
+
+# Terminal 2: frontend (React + Vite), port 5173
+cd frontend
+npm run dev
+```
+
+Open **http://127.0.0.1:5173**. *Say:* "The React dev server forwards every `/api` request to Flask on port 5000."
+
+**Other terminal commands worth showing**
+
+| Command (from the folder shown) | What it shows |
+| --- | --- |
+| `backend> .\.venv\Scripts\python.exe check_log.py --last 5` | The log check in the terminal. Each entry's `prev` equals the previous entry's `hash`, so you can see the chain |
+| `backend> .\.venv\Scripts\python.exe -m pytest -v` | All 30 backend tests with their names |
+| `frontend> npm test` | The 6 website tests |
+| `backend> .\.venv\Scripts\python.exe seed.py` | Resets the demo data |
+
+Nice combination for the forensics part: do the cover-up on the Forensics page, then run `check_log.py` in the
+terminal. It also says VALID (fooled), and only **Compare with copy** in the website finds the deleted entries.
+
+> If `python` is "not recognized", use the full path shown above (`.\.venv\Scripts\python.exe`); the
+> project's Python and libraries are inside the `.venv` folder.
+
 ---
 
 ## 3. What each page does
