@@ -103,3 +103,16 @@ def test_content_is_encrypted_in_database(client, users):
     client.post("/api/records", json={"title": "Notes", "category": "health", "content": "very private"})
     stored = Record.query.first().encrypted_content
     assert "very private" not in stored
+
+
+def test_log_is_shown_in_plain_english(client, users):
+    record = make_record(users["alice"], "Blood test", "health", "x")
+    login(client, "acme")
+    view(client, record, "research")
+    client.post("/api/logout")
+    login(client, "alice")
+    entry = next(e for e in client.get("/api/logs").get_json()["logs"] if e["action"] == "record.view")
+    assert entry["who"] == "Acme"
+    assert entry["what"] == "Tried to view data"
+    assert entry["on"] == "Blood test (Alice)"
+    assert entry["reason_text"] == "No permission given"

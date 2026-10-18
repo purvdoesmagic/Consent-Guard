@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, formatTime, reasonText } from "../api.js";
+import { api, formatTime } from "../api.js";
 
 // The forensic case study, step by step: Carol vs QuickLoans.
 export default function Forensics() {
@@ -223,8 +223,8 @@ function ComparisonResult({ result }) {
             <tr>
               <th>Time</th>
               <th>Who</th>
-              <th>Action</th>
-              <th>Result</th>
+              <th>What happened</th>
+              <th>On</th>
               <th>Reason</th>
             </tr>
           </thead>
@@ -233,9 +233,9 @@ function ComparisonResult({ result }) {
               <tr key={i}>
                 <td className="nowrap">{formatTime(m.time)}</td>
                 <td>{m.who}</td>
-                <td>{m.action} ({m.details})</td>
-                <td><span className="tag denied">{m.result}</span></td>
-                <td>{reasonText(m.reason)}</td>
+                <td>{m.what}</td>
+                <td>{m.on}</td>
+                <td>{m.reason_text}</td>
               </tr>
             ))}
           </tbody>

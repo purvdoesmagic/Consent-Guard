@@ -26,7 +26,14 @@ export default function Alerts() {
   return (
     <>
       <h1>Alerts</h1>
-      <p className="muted">Suspicious activity found by simple rules. An alert is a lead to check, not proof.</p>
+      <p className="subtitle">Suspicious activity found in the log by four simple rules. An alert is a lead to check, not proof.</p>
+      <div className="card rules">
+        <strong>The rules:</strong>
+        <span>R1 Many blocked attempts (3+ in 10 min)</span>
+        <span>R2 Tried after permission was withdrawn</span>
+        <span>R3 Wrong purpose or data type</span>
+        <span>R4 Many wrong passwords (5+ in 10 min)</span>
+      </div>
       {error && <p className="error">{error}</p>}
       {alerts && alerts.length === 0 && <p>No alerts.</p>}
       {alerts?.map((a, i) => (

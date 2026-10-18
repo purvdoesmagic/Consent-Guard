@@ -31,6 +31,9 @@ export default function Cases() {
   return (
     <>
       <h1>Cases</h1>
+      <p className="subtitle">
+        A case groups log entries as evidence for one complaint or alert, with your notes and a PDF report.
+      </p>
       <form className="card" onSubmit={create}>
         <h2>New case</h2>
         <label>

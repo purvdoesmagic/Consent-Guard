@@ -26,6 +26,7 @@ export default function Account({ user, onChange }) {
   return (
     <>
       <h1>Account</h1>
+      <p className="subtitle">Your account details and login security.</p>
       <div className="card">
         <p>
           <strong>{user.name}</strong> (@{user.username}, {user.role})

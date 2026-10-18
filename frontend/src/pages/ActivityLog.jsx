@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, formatTime, reasonText } from "../api.js";
+import { api, formatTime } from "../api.js";
 
 export function LogTable({ logs }) {
   if (logs.length === 0) return <p className="muted">No entries.</p>;
@@ -10,7 +10,7 @@ export function LogTable({ logs }) {
           <th>#</th>
           <th>Time</th>
           <th>Who</th>
-          <th>Action</th>
+          <th>What happened</th>
           <th>On</th>
           <th>Result</th>
           <th>Reason</th>
@@ -22,10 +22,10 @@ export function LogTable({ logs }) {
             <td>{e.id}</td>
             <td className="nowrap">{formatTime(e.time)}</td>
             <td>{e.who}</td>
-            <td>{e.action}</td>
-            <td>{e.owner ? `${e.owner}'s ${e.target}` : e.target}</td>
-            <td><span className={`tag ${e.result}`}>{e.result}</span></td>
-            <td>{reasonText(e.reason)}</td>
+            <td>{e.what}</td>
+            <td>{e.on}</td>
+            <td><span className={`tag ${e.result}`}>{e.result_text}</span></td>
+            <td>{e.reason_text}</td>
           </tr>
         ))}
       </tbody>
@@ -49,7 +49,7 @@ export default function ActivityLog() {
 
   const text = search.toLowerCase();
   const shown = logs.filter(FILTERS[filter][1]).filter((e) =>
-    [e.who, e.owner, e.action, e.target, e.reason].join(" ").toLowerCase().includes(text),
+    [e.who, e.what, e.on, e.reason_text].join(" ").toLowerCase().includes(text),
   );
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function ActivityLog() {
           ))}
           <input
             className="search"
-            placeholder="Search (e.g. quickloans)"
+            placeholder="Search, e.g. BrightAds or withdrawn"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

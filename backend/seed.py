@@ -279,7 +279,13 @@ def _seed_timeline():
     open_case(ivy, "Carol's complaint against QuickLoans",
               "Carol gave QuickLoans permission to use her financial and contact data for her loan. "
               "She withdrew it after getting marketing calls, but the calls continued.",
-              ql_entries)
+              ql_entries,
+              notes="QuickLoans viewed Carol's credit report and contact details while it had permission. "
+                    "After that every attempt was blocked: once for the wrong purpose (marketing), once for a "
+                    "data type she never shared (location), 4 times after she withdrew permission, and 3 times "
+                    "on Dave's records, who never gave permission.\n\nConclusion: QuickLoans got no data after "
+                    "Carol withdrew. The marketing calls most likely used the phone number it had already seen "
+                    "while it had permission.")
 
 
 if __name__ == "__main__":

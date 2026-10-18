@@ -6,11 +6,11 @@ from seed import make_user, seed
 
 def test_demo_data_triggers_all_four_rules(app):
     seed()
-    names = {u.id: u.username for u in User.query.all()}
+    names = {u.id: u.name for u in User.query.all()}
     alerts = find_alerts(LogEntry.query.order_by(LogEntry.id).all(), names)
     assert {a["rule"] for a in alerts} == {"R1", "R2", "R3", "R4"}
     after_withdrawal = {a["explanation"].split()[0]: len(a["log_ids"]) for a in alerts if a["rule"] == "R2"}
-    assert after_withdrawal == {"brightads": 3, "quickloans": 4}
+    assert after_withdrawal == {"BrightAds": 3, "QuickLoans": 4}
 
 
 def test_only_investigators_see_alerts_and_cases(client, users):

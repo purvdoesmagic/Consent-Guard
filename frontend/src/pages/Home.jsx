@@ -30,7 +30,7 @@ export default function Home({ user }) {
   return (
     <>
       <h1>Welcome, {user.name}</h1>
-      <p className="subtitle">Logged in as a {user.role}.</p>
+      <p className="subtitle">Logged in as {user.role === "investigator" ? "an" : "a"} {user.role}.</p>
 
       <div className="stats">
         {cards.map(([label, value]) => (

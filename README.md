@@ -83,6 +83,7 @@ Consent-Guard/
 │  ├─ detection.py      suspicious-activity rules
 │  ├─ report.py         PDF report
 │  ├─ forensics.py      evidence copies and tamper comparison
+│  ├─ log_text.py       turns log entries into plain English
 │  ├─ seed.py           creates demo data
 │  ├─ check_log.py      checks the log from the terminal
 │  ├─ routes/           API: auth.py, data.py, investigator.py
@@ -137,7 +138,7 @@ download the PDF report.
 ## Tests
 
 ```powershell
-cd backend;  .\.venv\Scripts\python.exe -m pytest     # 30 tests
+cd backend;  .\.venv\Scripts\python.exe -m pytest     # 32 tests
 cd frontend; npm test                                  # 6 tests
 ```
 

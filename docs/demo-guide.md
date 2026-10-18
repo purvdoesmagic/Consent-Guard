@@ -70,7 +70,7 @@ Open **http://127.0.0.1:5173**. *Say:* "The React dev server forwards every `/ap
 | Command (from the folder shown) | What it shows |
 | --- | --- |
 | `backend> .\.venv\Scripts\python.exe check_log.py --last 5` | The log check in the terminal. Each entry's `prev` equals the previous entry's `hash`, so you can see the chain |
-| `backend> .\.venv\Scripts\python.exe -m pytest -v` | All 30 backend tests with their names |
+| `backend> .\.venv\Scripts\python.exe -m pytest -v` | All 32 backend tests with their names |
 | `frontend> npm test` | The 6 website tests |
 | `backend> .\.venv\Scripts\python.exe seed.py` | Resets the demo data |
 
@@ -89,7 +89,7 @@ terminal. It also says VALID (fooled), and only **Compare with copy** in the web
 | Page | What it shows | What to say |
 | --- | --- | --- |
 | **Home** | Numbers for your account and shortcuts | "Each role sees a different dashboard." |
-| **Activity log** | Every action saved by the system, with filters (All / Allowed / Blocked / Logins) and search | "Even blocked attempts are saved. Nobody can quietly try and fail." |
+| **Activity log** | Every action saved by the system, written in plain English (who, what happened, on which data, result, reason), with filters (All / Allowed / Blocked / Logins) and search | "Even blocked attempts are saved. Nobody can quietly try and fail." |
 | **Check the log** button | Walks through the hash chain and says VALID or INVALID | "Each entry stores the hash of the one before it, so changes break the chain." |
 | **Account** | Turn on two-step login (6-digit code from a phone app) | "Optional extra security, the same idea as Google Authenticator." |
 
@@ -197,10 +197,11 @@ Forensics ideas you can name:
 | Alerts | `backend/detection.py` | 4 rules (R1–R4) over the log entries |
 | Forensics | `backend/forensics.py` | `save_copy()`, `compare()`, `restore()`, and the demo `simulate_cover_up()` |
 | PDF report | `backend/report.py` | Built with ReportLab |
+| Plain-English log | `backend/log_text.py` | Turns codes like `record.view` into "Tried to view data" for the website and the PDF |
 | Login and two-step | `backend/routes/auth.py` | Hashed passwords, TOTP codes, lockout after 5 wrong passwords |
 | Website | `frontend/src/pages/` | One React file per page |
 
-Tests: `backend` has 30 pytest tests and `frontend` has 6 Vitest tests. They run automatically on GitHub
+Tests: `backend` has 32 pytest tests and `frontend` has 6 Vitest tests. They run automatically on GitHub
 (Actions).
 
 ---

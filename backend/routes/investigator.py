@@ -5,6 +5,7 @@ from flask import Blueprint, Response, request
 import forensics
 from audit_log import add_log, verify_chain
 from detection import find_alerts
+from log_text import Describer
 from models import Case, LogEntry, db
 from report import make_pdf
 from routes.auth import login_required
@@ -54,9 +55,8 @@ def case_detail(user, case_id):
     case = get_case(user, case_id)
     if case is None:
         return {"error": "Case not found."}, 404
-    names = user_names()
-    logs = [dict(e.to_dict(), who=names.get(e.user_id, "-"), owner=names.get(e.owner_id, "")) for e in case.logs]
-    return {"case": case.to_dict(), "logs": logs}
+    describer = Describer()
+    return {"case": case.to_dict(), "logs": [describer.row(e) for e in case.logs]}
 
 
 @bp.post("/cases/<int:case_id>/logs")
@@ -94,7 +94,7 @@ def report(user, case_id):
     case = get_case(user, case_id)
     if case is None:
         return {"error": "Case not found."}, 404
-    pdf = make_pdf(case, verify_chain(), user_names(), user.name)
+    pdf = make_pdf(case, verify_chain(), Describer(), user.name)
     add_log("case.report", "success", user_id=user.id, target=f"case {case.id}")
     return Response(pdf, mimetype="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="case-{case.id}-report.pdf"'})

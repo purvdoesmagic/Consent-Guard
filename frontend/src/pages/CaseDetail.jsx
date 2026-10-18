@@ -22,8 +22,12 @@ export default function CaseDetail() {
   useEffect(load, [id]);
 
   async function saveNotes() {
-    await api(`/cases/${id}/notes`, "PUT", { notes });
-    setMessage("Notes saved.");
+    try {
+      await api(`/cases/${id}/notes`, "PUT", { notes });
+      setMessage("Notes saved.");
+    } catch (err) {
+      setMessage(err.message);
+    }
   }
 
   async function addLogs(event) {
@@ -40,14 +44,14 @@ export default function CaseDetail() {
   return (
     <>
       <h1>Case #{data.case.id}: {data.case.title}</h1>
-      <p>{data.case.description}</p>
+      <p className="subtitle">{data.case.description}</p>
 
       <div className="card">
         <h2>Evidence (log entries)</h2>
         <LogTable logs={data.logs} />
         <form className="row" onSubmit={addLogs}>
           <label>
-            Add log entries by number (e.g. 12, 13)
+            Add more log entries by number, e.g. 12, 13 (see the # column on the Activity log page)
             <input value={ids} onChange={(e) => setIds(e.target.value)} />
           </label>
           <button type="submit">Add</button>

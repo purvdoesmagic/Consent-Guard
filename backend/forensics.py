@@ -18,10 +18,12 @@ import hashlib
 import json
 import os
 import sqlite3
+from types import SimpleNamespace
 
 from flask import current_app
 
 from audit_log import FIRST_HASH, make_hash
+from log_text import Describer
 from models import LogEntry, User, case_logs, db, now
 
 LOG_COLUMNS = "time, user_id, action, target, result, reason, details"
@@ -111,16 +113,19 @@ def compare(info):
     live_rows = {tuple(r) for r in db.session.execute(db.text(f"SELECT {LOG_COLUMNS} FROM log_entry")).all()}
     missing = [r for r in old_rows if tuple(r) not in live_rows]
 
-    names = {u.id: u.username for u in User.query.all()}
+    describer = Describer()
+    missing_rows = []
+    for time, user_id, action, target, result, reason, details in missing:
+        entry = SimpleNamespace(time=time, user_id=user_id, action=action, target=target, result=result,
+                                reason=reason, details=details)
+        missing_rows.append(dict(time=time, result=result, details=details, **describer.describe(entry)))
+
     return {
         "copy": info,
         "copy_unchanged": copy_unchanged,
         "last_hash_found": last_hash_found,
         "live_entries": LogEntry.query.count(),
-        "missing": [
-            {"time": t, "who": names.get(u, "-"), "action": a, "target": tg, "result": r, "reason": rs, "details": d}
-            for t, u, a, tg, r, rs, d in missing
-        ],
+        "missing": missing_rows,
         "tampered": not last_hash_found or len(missing) > 0,
     }
 

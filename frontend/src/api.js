@@ -23,24 +23,13 @@ export async function api(path, method = "GET", body) {
   return data;
 }
 
-// Plain-English text for the reason codes the server sends
-const REASONS = {
-  ALLOWED: "Allowed by permission",
-  OWNER: "Own data",
-  NO_CONSENT: "No permission given",
-  WRONG_PURPOSE: "Wrong purpose",
-  CATEGORY_NOT_ALLOWED: "Data type not allowed",
-  CONSENT_WITHDRAWN: "Permission was withdrawn",
-  CONSENT_EXPIRED: "Permission has expired",
-  NOT_A_COMPANY: "Only companies can request data",
-  WRONG_PASSWORD: "Wrong password",
-  WRONG_CODE: "Wrong 6-digit code",
-  WRONG_ROLE: "Not allowed for this role",
+// What each purpose means, in plain words
+export const PURPOSE_TEXT = {
+  service: "Service: to provide something the user asked for (e.g. a loan, a hospital visit)",
+  research: "Research: studies, e.g. medical research",
+  marketing: "Marketing: ads, offers and promotional calls or emails",
+  analytics: "Analytics: statistics and trends",
 };
-
-export function reasonText(code) {
-  return REASONS[code] || code || "";
-}
 
 // The server stores times in UTC. Show them in Indian Standard Time (UTC+5:30),
 // e.g. "18 Oct 2026, 03:45 pm IST".

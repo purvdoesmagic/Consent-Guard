@@ -30,7 +30,7 @@ def test_cover_up_fools_the_app_but_not_the_evidence_copy(investigator):
     assert result["copy_unchanged"] is True
     assert result["last_hash_found"] is False
     assert len(result["missing"]) == 9
-    assert all(m["who"] == "quickloans" and m["result"] == "denied" for m in result["missing"])
+    assert all(m["who"] == "QuickLoans Credit Ltd" and m["what"] == "Tried to view data" for m in result["missing"])
 
 
 def test_restore_undoes_the_cover_up(investigator):

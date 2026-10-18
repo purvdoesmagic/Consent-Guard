@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, reasonText } from "../api.js";
+import { api, PURPOSE_TEXT } from "../api.js";
 
 export default function Records({ user }) {
   const [records, setRecords] = useState([]);
@@ -25,14 +25,14 @@ export default function Records({ user }) {
       const data = await api(`/records/${record.id}/view`, "POST", { purpose });
       setShown({ record, content: data.content });
     } catch (err) {
-      setShown({ record, blocked: err.data?.reason || err.message });
+      setShown({ record, blocked: err.data?.reason_text || err.message });
     }
   }
 
   const result = shown && (
     <div className={`card ${shown.blocked ? "blocked" : "allowed"}`}>
       <strong>{shown.record.title}</strong> ({shown.record.owner})
-      {shown.blocked ? <p>Blocked: {reasonText(shown.blocked)}</p> : <p>{shown.content}</p>}
+      {shown.blocked ? <p>Blocked: {shown.blocked}</p> : <p>{shown.content}</p>}
     </div>
   );
 
@@ -93,7 +93,7 @@ function SharedRecords({ records, onView }) {
     <div className="card">
       <h2>Shared with you ({records.length})</h2>
       {records.length === 0 ? (
-        <p className="muted">No user has shared any data with you yet.</p>
+        <p className="muted">Nothing is shared with you right now: no user has given you an active permission (or they withdrew it).</p>
       ) : (
         <table>
           <thead>
@@ -134,15 +134,16 @@ function NotSharedRecords({ records, purposes, onRequest }) {
         These users have not allowed you to use this data (or their permission was withdrawn or has expired).
         A request will be blocked and recorded in the activity log.
       </p>
-      <label className="inline-label">
+      <label className="inline-label wide">
         Request with purpose
         <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
           <option value="">Choose...</option>
           {purposes.map((p) => (
-            <option key={p} value={p}>{p}</option>
+            <option key={p} value={p}>{PURPOSE_TEXT[p] || p}</option>
           ))}
         </select>
       </label>
+      {!purpose && <p className="small muted">Choose a purpose first, then click Request.</p>}
       <table>
         <thead>
           <tr>

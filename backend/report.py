@@ -20,12 +20,12 @@ def ist(value):
     return (value + IST).strftime("%d %b %Y, %I:%M %p")
 
 
-def make_pdf(case, chain, names, investigator):
+def make_pdf(case, chain, describer, investigator):
     styles = getSampleStyleSheet()
     small = styles["BodyText"].clone("small", fontSize=8, leading=10)
 
     def text(value, style=styles["BodyText"]):
-        return Paragraph(escape(str(value or "")), style)
+        return Paragraph(escape(str(value or "")).replace("\n", "<br/>"), style)
 
     story = [
         Paragraph(f"ConsentGuard investigation report: case #{case.id}", styles["Title"]),
@@ -38,12 +38,14 @@ def make_pdf(case, chain, names, investigator):
         Paragraph("Log entries linked to this case", styles["Heading2"]),
     ]
 
-    rows = [["#", "Time (IST)", "Who", "Action", "Result", "Reason"]]
+    rows = [["#", "Time (IST)", "Who", "What happened", "On", "Result", "Reason"]]
     for e in case.logs:
-        rows.append([e.id, ist(e.time), names.get(e.user_id, "-"), e.action, e.result, e.reason or ""])
+        d = describer.describe(e)
+        rows.append([e.id, ist(e.time), d["who"], d["what"], d["on"], d["result_text"], d["reason_text"]])
     if len(rows) == 1:
-        rows.append(["-", "No entries linked yet", "", "", "", ""])
-    table = Table([[text(c, small) for c in row] for row in rows], colWidths=[25, 95, 70, 75, 50, 140], repeatRows=1)
+        rows.append(["-", "No entries linked yet", "", "", "", "", ""])
+    table = Table([[text(c, small) for c in row] for row in rows],
+                  colWidths=[22, 72, 68, 70, 115, 42, 80], repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E3ECF0")),
         ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),

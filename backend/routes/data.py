@@ -7,6 +7,7 @@ from flask import Blueprint, request
 from audit_log import add_log, verify_chain
 from detection import find_alerts
 from encryption import encrypt
+from log_text import Describer, reason_text
 from models import CATEGORIES, PURPOSES, Consent, LogEntry, Record, User, db, now
 from permissions import update_expiry, view_record
 from routes.auth import login_required
@@ -15,7 +16,7 @@ bp = Blueprint("data", __name__, url_prefix="/api")
 
 
 def user_names():
-    return {u.id: u.username for u in User.query.all()}
+    return {u.id: u.name for u in User.query.all()}
 
 
 # ---------- Home page numbers ----------
@@ -179,7 +180,8 @@ def view(user, record_id):
     purpose = (request.get_json(silent=True) or {}).get("purpose")
     allowed, reason, content = view_record(user, record, purpose)
     if not allowed:
-        return {"error": "Access blocked: you do not have permission.", "reason": reason}, 403
+        return {"error": "Access blocked: you do not have permission.", "reason": reason,
+                "reason_text": reason_text(reason)}, 403
     return {"record": record.to_dict(), "content": content}
 
 
@@ -194,14 +196,8 @@ def list_logs(user):
     elif user.role == "company":
         query = query.filter(LogEntry.user_id == user.id)
     entries = query.order_by(LogEntry.id.desc()).limit(300).all()
-    names = user_names()
-    rows = []
-    for e in entries:
-        row = e.to_dict()
-        row["who"] = names.get(e.user_id, "-")
-        row["owner"] = names.get(e.owner_id, "")
-        rows.append(row)
-    return {"logs": rows}
+    describer = Describer()
+    return {"logs": [describer.row(e) for e in entries]}
 
 
 @bp.get("/logs/verify")

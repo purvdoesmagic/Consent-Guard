@@ -44,7 +44,7 @@ def _alert(rule, title, severity, explanation, entries):
 
 
 def find_alerts(entries, names):
-    """`entries` = log entries in order, `names` = {user_id: username} for nicer messages."""
+    """`entries` = log entries in order, `names` = {user_id: name} for nicer messages."""
     alerts = []
     denied = [e for e in entries if e.action == "record.view" and e.result == "denied"]
 
