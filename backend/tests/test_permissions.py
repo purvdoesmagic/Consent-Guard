@@ -9,6 +9,15 @@ def view(client, record, purpose):
     return client.post(f"/api/records/{record.id}/view", json={"purpose": purpose})
 
 
+def test_company_sees_which_records_are_shared_with_it(client, users):
+    shared = make_record(users["alice"], "Blood test", "health", "x")
+    not_shared = make_record(users["alice"], "Bank summary", "financial", "x")
+    give_consent(users["alice"], users["acme"], "research", ["health"])
+    login(client, "acme")
+    rows = {r["id"]: r["allowed_purposes"] for r in client.get("/api/records").get_json()["records"]}
+    assert rows == {shared.id: ["research"], not_shared.id: []}
+
+
 def test_company_can_view_with_permission(client, users):
     record = make_record(users["alice"], "Blood test", "health", "secret result")
     give_consent(users["alice"], users["acme"], "research", ["health"])

@@ -138,6 +138,8 @@ button, .button {
 button:hover, .button:hover { background: var(--teal-dark); }
 button:disabled { background: #a9b8c2; cursor: not-allowed; }
 .small-btn { padding: 5px 10px; font-size: 0.85rem; }
+.small-btn + .small-btn { margin-left: 6px; }
+.inline-label { max-width: 300px; }
 .danger { background: var(--red); }
 .danger:hover { background: #a94530; }
 .secondary { background: #e3eef0; color: var(--ink); }

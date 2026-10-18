@@ -131,11 +131,24 @@ def withdraw_consent(user, consent_id):
 def list_records(user):
     if user.role == "user":
         records = Record.query.filter_by(owner_id=user.id).all()
-    else:
-        # A company sees the list (not the content) of records of users who gave it any permission
-        owner_ids = {c.user_id for c in Consent.query.filter_by(company_id=user.id)}
-        records = Record.query.filter(Record.owner_id.in_(owner_ids)).all() if owner_ids else []
-    return {"records": [r.to_dict() for r in records], "purposes": PURPOSES, "categories": CATEGORIES}
+        return {"records": [r.to_dict() for r in records], "purposes": PURPOSES, "categories": CATEGORIES}
+
+    # A company sees the list (not the content) of records of users who gave it any permission,
+    # plus the purposes its ACTIVE permissions allow for each record (empty = not shared)
+    consents = Consent.query.filter_by(company_id=user.id).all()
+    for consent in consents:
+        update_expiry(consent)
+    owner_ids = {c.user_id for c in consents}
+    records = Record.query.filter(Record.owner_id.in_(owner_ids)).all() if owner_ids else []
+    rows = []
+    for record in records:
+        row = record.to_dict()
+        row["allowed_purposes"] = sorted({
+            c.purpose for c in consents
+            if c.user_id == record.owner_id and c.status == "active" and record.category in c.category_list()
+        })
+        rows.append(row)
+    return {"records": rows, "purposes": PURPOSES, "categories": CATEGORIES}
 
 
 @bp.post("/records")

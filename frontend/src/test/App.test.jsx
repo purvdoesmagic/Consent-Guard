@@ -55,16 +55,23 @@ test("asks for the 6-digit code when two-step login is on", async () => {
   expect(await screen.findByLabelText(/6-digit code/)).toBeInTheDocument();
 });
 
-test("a blocked request shows the reason in plain English", async () => {
+test("a company sees shared data, and a blocked request shows the reason", async () => {
   fakeServer({
     "GET /api/me": [200, { user: { ...alice, role: "company", name: "Acme" } }],
     "GET /api/records": [200, {
-      records: [{ id: 5, title: "Blood test", category: "health", owner: "Alice" }],
+      records: [
+        { id: 5, title: "Blood test", category: "health", owner: "Alice", allowed_purposes: [] },
+        { id: 6, title: "Contact details", category: "contact", owner: "Bob", allowed_purposes: ["marketing"] },
+      ],
       purposes: ["research"], categories: ["health"],
     }],
     "POST /api/records/5/view": [403, { error: "Access blocked.", reason: "CONSENT_WITHDRAWN" }],
+    "POST /api/records/6/view": [200, { record: {}, content: "Phone +1 555-0187" }],
   });
   renderApp("/records");
+  expect(await screen.findByText("Shared with you (1)")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "View for marketing" }));
+  expect(await screen.findByText("Phone +1 555-0187")).toBeInTheDocument();
   await userEvent.selectOptions(await screen.findByLabelText(/purpose/), "research");
   await userEvent.click(await screen.findByRole("button", { name: "Request" }));
   expect(await screen.findByText("Blocked: Permission was withdrawn")).toBeInTheDocument();

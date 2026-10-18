@@ -105,7 +105,7 @@ terminal. It also says VALID (fooled), and only **Compare with copy** in the web
 | Page | What you can do |
 | --- | --- |
 | **Permissions given to us** | See which users gave you permission, for what, and if it is still active. |
-| **Request data** | Choose a purpose, then click **Request** on a record. You get the data only if the user's permission allows it. Otherwise you see why it was blocked. |
+| **Request data** | **Shared with you** lists the records you have permission for, with a **View** button for each allowed purpose. **Not shared with you** lists the rest: you can still send a request, but it is blocked and you see why. |
 
 ### Investigator (ivy)
 
@@ -137,14 +137,18 @@ terminal. It also says VALID (fooled), and only **Compare with copy** in the web
 
 1. Log out and sign in as **brightads**. Open **Permissions given to us**: Bob, Priya and Rahul have active
    permissions; Alice's is **withdrawn**.
-2. Open **Request data**, choose purpose **marketing** and click **Request** on Bob's "Contact details".
-   The data is shown (green). *Say:* "Bob allowed BrightAds to use his contact details for marketing."
-3. Now click **Request** on Alice's "Contact details". It shows **Blocked: Permission was withdrawn**.
-4. Click **Request** on Bob's "Vaccination record". It shows **Blocked: Data type not allowed**,
-   because Bob only allowed *contact*.
+2. Open **Request data**. The page has two parts:
+   * **Shared with you (3):** records BrightAds has an active permission for. Click **View for marketing** on
+     Bob's "Contact details" and his phone and email appear (green).
+     *Say:* "Bob allowed BrightAds to use his contact details for marketing, so the server shows them."
+   * **Not shared with you (7):** everything else. Choose a purpose under **Request with purpose**, then click
+     **Request**.
+3. Choose **marketing** and request Alice's "Contact details". It shows **Blocked: Permission was withdrawn**.
+4. Request Bob's "Vaccination record". It shows **Blocked: Data type not allowed**, because Bob only shared
+   *contact*.
 5. Choose **analytics** and request Alice's "Bank statement summary". It shows **Blocked: Wrong purpose**.
    *Say:* "The server asks 3 questions: Did they give permission? For this purpose? Is it still active and
-   does it cover this data type? Any 'no' means blocked."
+   does it cover this data type? Any 'no' means blocked, and every attempt is logged."
 
 ### Part C: the investigator (ivy, 2 min)
 
