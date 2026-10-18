@@ -33,10 +33,24 @@ export function LogTable({ logs }) {
   );
 }
 
+const FILTERS = {
+  all: ["All", () => true],
+  allowed: ["Allowed", (e) => e.result === "allowed"],
+  blocked: ["Blocked", (e) => e.result === "denied"],
+  logins: ["Logins", (e) => e.action === "login"],
+};
+
 export default function ActivityLog() {
   const [logs, setLogs] = useState([]);
   const [check, setCheck] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+
+  const text = search.toLowerCase();
+  const shown = logs.filter(FILTERS[filter][1]).filter((e) =>
+    [e.who, e.owner, e.action, e.target, e.reason].join(" ").toLowerCase().includes(text),
+  );
 
   useEffect(() => {
     api("/logs")
@@ -55,6 +69,7 @@ export default function ActivityLog() {
   return (
     <>
       <h1>Activity log</h1>
+      <p className="subtitle">Everything that happens is saved here, including blocked requests.</p>
       <div className="card">
         <p>Every entry is linked to the one before it. Click below to check that nothing was changed or deleted.</p>
         <button onClick={verify}>Check the log</button>
@@ -73,7 +88,21 @@ export default function ActivityLog() {
       </div>
       {error && <p className="error">{error}</p>}
       <div className="card">
-        <LogTable logs={logs} />
+        <div className="toolbar">
+          {Object.entries(FILTERS).map(([key, [label]]) => (
+            <button key={key} className={`chip${filter === key ? " selected" : ""}`} onClick={() => setFilter(key)}>
+              {label}
+            </button>
+          ))}
+          <input
+            className="search"
+            placeholder="Search (e.g. quickloans)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <p className="small muted">Showing {shown.length} of {logs.length} entries</p>
+        <LogTable logs={shown} />
       </div>
     </>
   );

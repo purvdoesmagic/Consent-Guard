@@ -7,6 +7,7 @@ import Alerts from "./pages/Alerts.jsx";
 import CaseDetail from "./pages/CaseDetail.jsx";
 import Cases from "./pages/Cases.jsx";
 import Consents from "./pages/Consents.jsx";
+import Forensics from "./pages/Forensics.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Records from "./pages/Records.jsx";
@@ -25,6 +26,7 @@ const MENU = {
     ["/log", "Activity log"],
   ],
   investigator: [
+    ["/forensics", "Forensics"],
     ["/alerts", "Alerts"],
     ["/cases", "Cases"],
     ["/consents", "All permissions"],
@@ -82,6 +84,7 @@ export default function App() {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/cases" element={<Cases />} />
           <Route path="/cases/:id" element={<CaseDetail />} />
+          <Route path="/forensics" element={<Forensics />} />
           <Route path="/account" element={<Account user={user} onChange={setUser} />} />
           <Route path="*" element={<p>Page not found.</p>} />
         </Routes>

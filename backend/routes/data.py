@@ -5,6 +5,7 @@ from datetime import timedelta
 from flask import Blueprint, request
 
 from audit_log import add_log, verify_chain
+from detection import find_alerts
 from encryption import encrypt
 from models import CATEGORIES, PURPOSES, Consent, LogEntry, Record, User, db, now
 from permissions import update_expiry, view_record
@@ -15,6 +16,36 @@ bp = Blueprint("data", __name__, url_prefix="/api")
 
 def user_names():
     return {u.id: u.username for u in User.query.all()}
+
+
+# ---------- Home page numbers ----------
+
+@bp.get("/summary")
+@login_required()
+def summary(user):
+    if user.role == "user":
+        my_logs = LogEntry.query.filter(LogEntry.owner_id == user.id, LogEntry.action == "record.view")
+        return {"cards": [
+            ["My data records", Record.query.filter_by(owner_id=user.id).count()],
+            ["Active permissions", Consent.query.filter_by(user_id=user.id, status="active").count()],
+            ["Views allowed", my_logs.filter(LogEntry.result == "allowed").count()],
+            ["Requests blocked", my_logs.filter(LogEntry.result == "denied").count()],
+        ]}
+    if user.role == "company":
+        my_logs = LogEntry.query.filter(LogEntry.user_id == user.id, LogEntry.action == "record.view")
+        return {"cards": [
+            ["Permissions received", Consent.query.filter_by(company_id=user.id).count()],
+            ["Still active", Consent.query.filter_by(company_id=user.id, status="active").count()],
+            ["Views allowed", my_logs.filter(LogEntry.result == "allowed").count()],
+            ["Requests blocked", my_logs.filter(LogEntry.result == "denied").count()],
+        ]}
+    all_logs = LogEntry.query.order_by(LogEntry.id).all()
+    return {"cards": [
+        ["Log entries", len(all_logs)],
+        ["Blocked requests", LogEntry.query.filter_by(action="record.view", result="denied").count()],
+        ["Alerts", len(find_alerts(all_logs, user_names()))],
+        ["Permissions", Consent.query.count()],
+    ]}
 
 
 # ---------- Consents ----------
@@ -44,7 +75,7 @@ def list_consents(user):
 @bp.post("/consents")
 @login_required("user")
 def give_consent(user):
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     company = db.session.get(User, data.get("company_id") or 0)
     purpose = data.get("purpose")
     categories = data.get("categories") or []
@@ -110,7 +141,7 @@ def list_records(user):
 @bp.post("/records")
 @login_required("user")
 def add_record(user):
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     title = (data.get("title") or "").strip()
     category = data.get("category")
     content = (data.get("content") or "").strip()
@@ -132,7 +163,7 @@ def view(user, record_id):
     record = db.session.get(Record, record_id)
     if record is None:
         return {"error": "Record not found."}, 404
-    purpose = (request.get_json() or {}).get("purpose")
+    purpose = (request.get_json(silent=True) or {}).get("purpose")
     allowed, reason, content = view_record(user, record, purpose)
     if not allowed:
         return {"error": "Access blocked: you do not have permission.", "reason": reason}, 403

@@ -1,10 +1,11 @@
 """Fill the database with fake demo data.
 
 Run from the backend folder:  python seed.py
-WARNING: this deletes the existing database first.
+WARNING: this deletes the existing database and evidence copies first.
 """
 
 import os
+import shutil
 from datetime import timedelta
 
 from werkzeug.security import generate_password_hash
@@ -104,17 +105,52 @@ def seed():
               notes="BrightAds was blocked 3 times after the withdrawal and also tried Bob's records without "
                     "any permission.")
 
+    seed_case_study(ivy)
+
+
+def seed_case_study(ivy):
+    """The forensic case study: Carol vs QuickLoans (see docs/case-study.md)."""
+    carol = make_user("carol", "Carol Customer", "user")
+    dave = make_user("dave", "Dave Other", "user")
+    ql = make_user("quickloans", "QuickLoans Credit Ltd", "company")
+
+    credit = make_record(carol, "Credit file", "financial", "Credit score 712 (FAKE DATA)")
+    phone = make_record(carol, "Contact details", "contact", "Phone +00 111 2222 (FAKE DATA)")
+    location = make_record(carol, "Location history", "location", "Testville (FAKE DATA)")
+    dave_records = [
+        make_record(dave, "Credit file", "financial", "Credit score 650 (FAKE DATA)"),
+        make_record(dave, "Contact details", "contact", "dave@example.invalid (FAKE DATA)"),
+        make_record(dave, "Health record", "health", "Allergy: none (FAKE DATA)"),
+    ]
+
+    consent = give_consent(carol, ql, "service", ["financial", "contact"])
+    view_record(ql, credit, "service")      # allowed: needed for the loan
+    view_record(ql, phone, "service")       # allowed: QuickLoans now has her phone number
+    view_record(ql, phone, "marketing")     # blocked: wrong purpose
+    view_record(ql, location, "service")    # blocked: location was never allowed
+    withdraw(consent)
+    for record in (phone, credit, phone, credit):
+        view_record(ql, record, "service")  # blocked: after withdrawal
+    for record in dave_records:
+        view_record(ql, record, "marketing")  # blocked: Dave never gave permission
+
+    entries = LogEntry.query.filter_by(user_id=ql.id, action="record.view").all()
+    open_case(ivy, "Carol's complaint against QuickLoans",
+              "Carol gave QuickLoans permission to use her financial and contact data for her loan. "
+              "She withdrew it after getting marketing calls, but the calls continued.",
+              entries)
 
 if __name__ == "__main__":
     app = create_app()
     db_file = os.path.join(app.instance_path, "consentguard.db")
+    shutil.rmtree(os.path.join(app.instance_path, "evidence"), ignore_errors=True)  # old evidence copies
     with app.app_context():
         db.drop_all()
         db.create_all()
         seed()
     print("Demo data created in", db_file)
     print("Password for every account:", DEMO_PASSWORD)
-    print("  Users:        alice, bob")
-    print("  Companies:    acme, brightads")
+    print("  Users:        alice, bob, carol, dave")
+    print("  Companies:    acme, brightads, quickloans")
     print("  Investigator: ivy")
     print("Note: Bob's permission for Acme expires about 2 minutes from now.")

@@ -2,6 +2,7 @@
 
 from flask import Blueprint, Response, request
 
+import forensics
 from audit_log import add_log, verify_chain
 from detection import find_alerts
 from models import Case, LogEntry, db
@@ -29,7 +30,7 @@ def list_cases(user):
 @bp.post("/cases")
 @login_required("investigator")
 def create_case(user):
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     title = (data.get("title") or "").strip()
     if not title:
         return {"error": "Please enter a title."}, 400
@@ -64,7 +65,7 @@ def link_logs(user, case_id):
     case = get_case(user, case_id)
     if case is None:
         return {"error": "Case not found."}, 404
-    ids = (request.get_json() or {}).get("log_ids") or []
+    ids = (request.get_json(silent=True) or {}).get("log_ids") or []
     entries = LogEntry.query.filter(LogEntry.id.in_(ids)).all()
     for entry in entries:
         if entry not in case.logs:
@@ -81,7 +82,7 @@ def save_notes(user, case_id):
     case = get_case(user, case_id)
     if case is None:
         return {"error": "Case not found."}, 404
-    case.notes = (request.get_json() or {}).get("notes") or ""
+    case.notes = (request.get_json(silent=True) or {}).get("notes") or ""
     db.session.commit()
     add_log("case.notes", "success", user_id=user.id, target=f"case {case.id}")
     return {"case": case.to_dict()}
@@ -97,3 +98,53 @@ def report(user, case_id):
     add_log("case.report", "success", user_id=user.id, target=f"case {case.id}")
     return Response(pdf, mimetype="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="case-{case.id}-report.pdf"'})
+
+
+# ---------- Forensics (see forensics.py) ----------
+
+@bp.get("/evidence")
+@login_required("investigator")
+def list_evidence(user):
+    return {"copies": forensics.list_copies()}
+
+
+@bp.post("/evidence")
+@login_required("investigator")
+def save_evidence(user):
+    note = ((request.get_json(silent=True) or {}).get("note") or "").strip()
+    info = forensics.save_copy(user, note)
+    add_log("evidence.save", "success", user_id=user.id, target=f"evidence copy {info['id']}",
+            details=f"entries={info['entries']}")
+    return {"copy": info}, 201
+
+
+@bp.post("/evidence/<int:copy_id>/compare")
+@login_required("investigator")
+def compare_evidence(user, copy_id):
+    info = forensics.get_copy(copy_id)
+    if info is None:
+        return {"error": "Evidence copy not found."}, 404
+    result = forensics.compare(info)
+    add_log("evidence.compare", "failed" if result["tampered"] else "success", user_id=user.id,
+            target=f"evidence copy {copy_id}", details=f"missing={len(result['missing'])}")
+    return result
+
+
+@bp.post("/evidence/<int:copy_id>/restore")
+@login_required("investigator")
+def restore_evidence(user, copy_id):
+    info = forensics.get_copy(copy_id)
+    if info is None:
+        return {"error": "Evidence copy not found."}, 404
+    forensics.restore(info)
+    add_log("evidence.restore", "success", user_id=user.id, target=f"evidence copy {copy_id}")
+    return {"message": f"Database restored from evidence copy {copy_id}."}
+
+
+@bp.post("/demo/cover-up")
+@login_required("investigator")
+def demo_cover_up(user):
+    """DEMO ONLY: pretend to be an insider editing the database directly (not logged, like a real insider)."""
+    company = (request.get_json(silent=True) or {}).get("company") or "quickloans"
+    removed = forensics.simulate_cover_up(company)
+    return {"removed": removed, "company": company}

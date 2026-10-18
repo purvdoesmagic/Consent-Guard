@@ -50,7 +50,7 @@ def too_many_failed_logins(username):
 
 @bp.post("/register")
 def register():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip().lower()
     name = (data.get("name") or "").strip()
     password = data.get("password") or ""
@@ -76,7 +76,7 @@ def register():
 
 @bp.post("/login")
 def login():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip().lower()
     password = data.get("password") or ""
     code = (data.get("code") or "").strip()
@@ -136,7 +136,7 @@ def two_step_setup(user):
 @login_required()
 def two_step_enable(user):
     secret = session.get("pending_secret")
-    code = ((request.get_json() or {}).get("code") or "").strip()
+    code = ((request.get_json(silent=True) or {}).get("code") or "").strip()
     if not secret:
         return {"error": "Start the setup first."}, 400
     if not pyotp.TOTP(secret).verify(code, valid_window=1):

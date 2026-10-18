@@ -18,7 +18,7 @@ And if a company misuses your data, how can anyone prove what happened?
 | --- | --- |
 | **User** (data owner) | Add personal data (stored encrypted), give a company permission for a purpose, withdraw it, see who tried to view their data |
 | **Company** | Ask to see a user's data for a purpose. It only gets the data if the user's permission allows it |
-| **Investigator** | See alerts about suspicious activity, open cases, add log entries as evidence, write notes, download a PDF report |
+| **Investigator** | See alerts about suspicious activity, open cases, add log entries as evidence, write notes, download a PDF report, and run the forensic case study (evidence copy, cover-up detection) |
 
 ### How a permission check works
 
@@ -82,18 +82,18 @@ Consent-Guard/
 │  ├─ encryption.py     AES encryption of personal data
 │  ├─ detection.py      suspicious-activity rules
 │  ├─ report.py         PDF report
+│  ├─ forensics.py      evidence copies and tamper comparison
 │  ├─ seed.py           creates demo data
 │  ├─ routes/           API: auth.py, data.py, investigator.py
 │  └─ tests/            pytest tests
 ├─ frontend/src/
 │  ├─ App.jsx           menu and pages
 │  ├─ api.js            calls the backend
-│  └─ pages/            Login, Consents, Records, ActivityLog, Alerts, Cases, ...
+│  └─ pages/            Login, Consents, Records, ActivityLog, Alerts, Cases, Forensics, ...
 ├─ scripts/
 │  ├─ setup_env.py      creates the .env file with random keys
-│  ├─ case_study.py     the Carol vs QuickLoans case study
 │  └─ totp.py           prints the current 6-digit code (demo without a phone)
-└─ docs/case-study.md
+└─ docs/               case-study.md, demo-guide.md (how to present the project)
 ```
 
 ## How to run (Windows PowerShell)
@@ -125,8 +125,8 @@ Demo accounts (password for all: `Demo-Password-2026!`):
 
 | Account | Role |
 | --- | --- |
-| alice, bob | User |
-| acme, brightads | Company |
+| alice, bob, carol, dave | User |
+| acme, brightads, quickloans | Company |
 | ivy | Investigator |
 
 Things to try: log in as **brightads** and request Alice's data (blocked, because she withdrew permission).
@@ -136,15 +136,22 @@ download the PDF report.
 ## Tests
 
 ```powershell
-cd backend;  .\.venv\Scripts\python.exe -m pytest     # 27 tests
-cd frontend; npm test                                  # 5 tests
+cd backend;  .\.venv\Scripts\python.exe -m pytest     # 30 tests
+cd frontend; npm test                                  # 6 tests
 ```
 
-## Case study
+## Case study (digital forensics)
 
-`scripts/case_study.py` tells the story of Carol, who withdrew permission from QuickLoans but kept getting
-marketing calls. Someone then secretly deletes QuickLoans' blocked attempts from the log. The app's own check is
-fooled, but comparing with a saved copy proves the cover-up. See [docs/case-study.md](docs/case-study.md).
+Log in as **ivy** and open **Forensics**. It walks through the story of Carol, who withdrew permission from
+QuickLoans but kept getting marketing calls:
+
+1. Save an evidence copy of the database (with its SHA-256 and the last log hash)
+2. Simulate an insider who deletes QuickLoans' blocked attempts and recalculates every hash
+3. The app's own log check says VALID (fooled)
+4. Comparing with the evidence copy shows the 9 deleted entries
+5. Restore the copy to repeat the demo
+
+See [docs/case-study.md](docs/case-study.md), and [docs/demo-guide.md](docs/demo-guide.md) for how to present it.
 
 ## Limitations and future work
 

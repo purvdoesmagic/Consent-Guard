@@ -74,3 +74,21 @@ test("reason codes have readable text", () => {
   expect(reasonText("WRONG_PURPOSE")).toBe("Wrong purpose");
   expect(reasonText("SOMETHING_NEW")).toBe("SOMETHING_NEW");
 });
+
+test("the forensics page shows which log entries were deleted", async () => {
+  const copy = { id: 1, saved_at: "2026-10-18T10:00:00", saved_by: "ivy", note: "", entries: 70, last_hash: "ab", file_sha256: "cd" };
+  fakeServer({
+    "GET /api/me": [200, { user: { ...alice, role: "investigator", name: "Ivy" } }],
+    "GET /api/evidence": [200, { copies: [copy] }],
+    "GET /api/cases": [200, { cases: [] }],
+    "POST /api/evidence/1/compare": [200, {
+      copy, tampered: true, copy_unchanged: true, last_hash_found: false, live_entries: 61,
+      missing: [{ time: "2026-10-18T09:00:00", who: "quickloans", action: "record.view", target: "record 9",
+        result: "denied", reason: "CONSENT_WITHDRAWN", details: "purpose=service" }],
+    }],
+  });
+  renderApp("/forensics");
+  await userEvent.click(await screen.findByRole("button", { name: "Compare with copy 1" }));
+  expect(await screen.findByText("The log was tampered with.")).toBeInTheDocument();
+  expect(screen.getByText("Permission was withdrawn")).toBeInTheDocument();
+});
