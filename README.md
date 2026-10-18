@@ -117,6 +117,10 @@ npm install
 npm run dev                             # website on http://127.0.0.1:5173
 ```
 
+**Quick start after the first setup:** double-click `run.bat` in the project folder. It starts one server that
+shows both the website and the API at http://127.0.0.1:5000 and opens it in your browser. (It builds the website
+with `npm run build` the first time.) Close the black window to stop it.
+
 Demo accounts (password for all: `Demo-Password-2026!`):
 
 | Account | Role |
